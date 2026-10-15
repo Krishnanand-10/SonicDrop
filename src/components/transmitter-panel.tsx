@@ -20,8 +20,7 @@ import {
   type PayloadKind,
   type TransmitterTelemetry
 } from '@/acoustic/types';
-import { transmitter } from '@/acoustic/transmitter';
-import { buildPacket } from '@/acoustic/packet';
+import { transceiver } from '@/acoustic/ggwave-engine';
 
 interface TransmitterPanelProps {
   profile: ModulationProfile;
@@ -81,29 +80,58 @@ export function TransmitterPanel({
   };
 
   const handleTransmit = async () => {
-    let payloadBytes: Uint8Array;
-    let filename: string | undefined;
-
+    let textToSend = '';
     if (kind === 'file' && selectedFile) {
-      payloadBytes = selectedFile.bytes;
-      filename = selectedFile.name;
+      if (selectedFile.bytes.length <= 384) {
+        let binaryStr = '';
+        for (let i = 0; i < selectedFile.bytes.length; i++) {
+          binaryStr += String.fromCharCode(selectedFile.bytes[i]);
+        }
+        textToSend = JSON.stringify({
+          k: 'file',
+          name: selectedFile.name,
+          mime: selectedFile.type,
+          b64: btoa(binaryStr),
+        });
+      } else {
+        textToSend = JSON.stringify({
+          k: 'file',
+          name: selectedFile.name,
+          mime: selectedFile.type,
+          d: `FILE: ${selectedFile.name} (${selectedFile.bytes.length} bytes)`,
+        });
+      }
+    } else if (kind === 'crypto_key') {
+      textToSend = JSON.stringify({
+        k: 'crypto_key',
+        d: textContent.trim(),
+      });
     } else {
-      payloadBytes = new TextEncoder().encode(textContent.trim());
+      textToSend = JSON.stringify({
+        k: 'text',
+        d: textContent.trim(),
+      });
     }
 
-    if (payloadBytes.length === 0) return;
+    if (!textToSend) return;
 
     try {
       setIsTransmitting(true);
-      const packet = buildPacket(payloadBytes, kind, filename ? { filename } : undefined);
+      const proto = profile.type === 'ultrasonic' ? 'ultrasound_normal' : 'audible_normal';
 
-      await transmitter.transmit(packet, profile, (t) => {
-        setTelemetry(t);
+      await transceiver.transmit(textToSend, proto, 75, (p) => {
+        setTelemetry({
+          isTransmitting: p < 100,
+          currentSymbol: Math.round((p / 100) * 40),
+          totalSymbols: 40,
+          currentFreqHz: profile.baseFrequency,
+          progressPercent: p,
+        });
       });
 
       onTransmissionComplete?.(1, 1500);
-    } catch {
-      // Handled abort or error
+    } catch (err) {
+      console.error('Transmit error:', err);
     } finally {
       setIsTransmitting(false);
       setTelemetry(null);
@@ -111,7 +139,7 @@ export function TransmitterPanel({
   };
 
   const handleStop = () => {
-    transmitter.stop();
+    transceiver.stopTransmit();
     setIsTransmitting(false);
     setTelemetry(null);
   };
@@ -294,10 +322,10 @@ export function TransmitterPanel({
       )}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2 text-xs font-mono text-white/60">
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
-          <span>Reed-Solomon FEC (8B Parity) + IEEE CRC-32</span>
+          <span>Volume: set speaker to ~70-80% for air-gap transfer</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -315,7 +343,9 @@ export function TransmitterPanel({
               className="rounded-full bg-white hover:bg-white/90 text-sky-700 px-7 py-2.5 text-sm font-bold shadow-lg transition-all cursor-pointer flex items-center gap-2 border border-transparent shadow-sky-400/20"
             >
               <Send className="h-4 w-4 text-sky-600" />
-              <span>Transmit Ultrasonic Wave</span>
+              <span>
+                {profile.type === 'ultrasonic' ? 'Transmit Ultrasonic (Silent)' : 'Transmit Acoustic (Modem Chirp)'}
+              </span>
             </button>
           )}
         </div>

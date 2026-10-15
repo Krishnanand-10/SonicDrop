@@ -27,7 +27,7 @@ import {
   type DecodedPayload,
   type ReceiverTelemetry
 } from '@/acoustic/types';
-import { receiver } from '@/acoustic/receiver';
+import { transceiver } from '@/acoustic/ggwave-engine';
 
 export function App() {
   const [profile, setProfile] = useState<ModulationProfile>(PROFILES.ultrasonic);
@@ -51,42 +51,39 @@ export function App() {
     };
   }, []);
 
-  // Hook receiver callbacks
+  // Hook transceiver callbacks
   useEffect(() => {
-    receiver.setProfile(profile);
-
-    receiver.onTelemetry = (t) => {
+    transceiver.onTelemetry = (t) => {
       setTelemetry(t);
     };
 
-    receiver.onPacketReceived = (p) => {
+    transceiver.onPacketReceived = (p) => {
       setLastPayload(p);
-      setTelemetry(null);
     };
 
-    receiver.onError = (msg) => {
+    transceiver.onError = (msg) => {
       setTelemetry((prev) =>
         prev ? { ...prev, statusMessage: `Error: ${msg}`, state: 'error' } : null
       );
     };
 
     return () => {
-      receiver.stop();
+      transceiver.stopListening();
     };
-  }, [profile]);
+  }, []);
 
   const toggleListening = async () => {
     if (isListening) {
-      receiver.stop();
+      transceiver.stopListening();
       setIsListening(false);
       setTelemetry(null);
     } else {
       try {
-        await receiver.start();
+        await transceiver.startListening();
         setIsListening(true);
       } catch (err) {
         console.error('Microphone access denied:', err);
-        alert('Please allow microphone access with noise cancellation disabled.');
+        alert('Please allow microphone access to receive ultrasonic sound waves.');
       }
     }
   };
@@ -343,7 +340,7 @@ export function App() {
           <div className="space-y-6">
             {/* Live Waterfall Spectrogram Banner */}
             <WaterfallSpectrogram
-              analyser={receiver.getAnalyserNode()}
+              analyser={transceiver.getAnalyserNode()}
               profile={profile}
               isListening={isListening}
             />
