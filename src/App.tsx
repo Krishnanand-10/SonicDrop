@@ -1,124 +1,401 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Radio, WifiOff, ShieldCheck, Sparkles } from 'lucide-react'
-import { CloudShader } from '@/components/ui/cloud-shader'
+"use client";
+
+import { useState, useEffect } from 'react';
+import {
+  Radio,
+  ShieldCheck,
+  Activity,
+  WifiOff,
+  Columns,
+} from 'lucide-react';
+
+function GithubIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
+import { CloudShader } from '@/components/ui/cloud-shader';
+import { WaterfallSpectrogram } from '@/components/waterfall-spectrogram';
+import { TransmitterPanel } from '@/components/transmitter-panel';
+import { ReceiverPanel } from '@/components/receiver-panel';
+import {
+  PROFILES,
+  type ModulationProfile,
+  type DecodedPayload,
+  type ReceiverTelemetry
+} from '@/acoustic/types';
+import { receiver } from '@/acoustic/receiver';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'tx' | 'rx'>('tx')
+  const [profile, setProfile] = useState<ModulationProfile>(PROFILES.ultrasonic);
+  const [viewMode, setViewMode] = useState<'transceiver' | 'tx' | 'rx' | 'spectrogram'>('transceiver');
+
+  // Receiver state
+  const [isListening, setIsListening] = useState(false);
+  const [telemetry, setTelemetry] = useState<ReceiverTelemetry | null>(null);
+  const [lastPayload, setLastPayload] = useState<DecodedPayload | null>(null);
+
+  // Hook receiver callbacks
+  useEffect(() => {
+    receiver.setProfile(profile);
+
+    receiver.onTelemetry = (t) => {
+      setTelemetry(t);
+    };
+
+    receiver.onPacketReceived = (p) => {
+      setLastPayload(p);
+      setTelemetry(null);
+    };
+
+    receiver.onError = (msg) => {
+      setTelemetry((prev) =>
+        prev ? { ...prev, statusMessage: `Error: ${msg}`, state: 'error' } : null
+      );
+    };
+
+    return () => {
+      receiver.stop();
+    };
+  }, [profile]);
+
+  const toggleListening = async () => {
+    if (isListening) {
+      receiver.stop();
+      setIsListening(false);
+      setTelemetry(null);
+    } else {
+      try {
+        await receiver.start();
+        setIsListening(true);
+      } catch (err) {
+        console.error('Microphone access denied:', err);
+        alert('Please allow microphone access with noise cancellation disabled.');
+      }
+    }
+  };
+
+  const scrollToDashboard = () => {
+    const el = document.getElementById('dashboard-container');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden text-slate-100 flex flex-col font-sans">
-      {/* Background Volumetric Cloud Shader */}
-      <CloudShader
-        className="absolute inset-0 -z-10"
-        speed={0.7}
-        count={5}
-        skyTopColor="#030712"
-        skyBottomColor="#0f172a"
-        cloudColor="#1e293b"
-      />
+    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950 font-sans selection:bg-sky-500/30 selection:text-sky-200">
+      {/* ============================================================== */}
+      {/* CLOUD MOTION FRAME: IDENTICAL TO ISOBAR PROJECT                */}
+      {/* ============================================================== */}
+      <CloudShader className="absolute inset-0 pointer-events-none" />
 
-      {/* Top Navigation */}
-      <header className="relative z-20 w-full border-b border-white/10 bg-slate-950/40 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 text-slate-950 shadow-lg shadow-cyan-500/20">
-            <Radio className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent">
-                SonicDrop
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-                v1.0.0
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 font-mono">Air-Gapped Ultrasonic Acoustic Data Link</p>
-          </div>
-        </div>
+      {/* Subtle atmospheric gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-slate-950/80 pointer-events-none" />
 
-        {/* Air-Gap Verification Badge */}
-        <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-950/30 px-3.5 py-1.5 backdrop-blur-sm">
-          <WifiOff className="h-4 w-4 text-emerald-400 animate-pulse" />
-          <span className="font-mono text-xs font-medium text-emerald-300">
-            AIR-GAP PROTOCOL READY
+      {/* ============================================================== */}
+      {/* NAVBAR                                                         */}
+      {/* ============================================================== */}
+      <nav className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-3 py-3 sm:px-6 md:px-8 select-none">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-sm font-bold text-sky-700 shadow-sm font-mono">
+            S
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-white drop-shadow-sm font-mono">
+            SonicDrop<span className="text-sky-200">.Air</span>
           </span>
         </div>
-      </header>
 
-      {/* Main Content Area */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-5xl mx-auto w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-mono mb-4">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Near-Inaudible 18.5 kHz – 20.0 kHz Acoustic Modem</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-md">
-            Transmit Data Through <br />
-            <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
-              Near-Silent Ultrasonic Sound
-            </span>
-          </h1>
-          <p className="mt-3 text-slate-300 max-w-xl mx-auto text-sm md:text-base">
-            No Wi-Fi. No Bluetooth. No Cables. Transfer cryptographic keys, files, and text across air-gapped devices using physical speakers and microphones.
-          </p>
-        </motion.div>
-
-        {/* Mode Switcher */}
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/60 border border-white/10 backdrop-blur-xl mb-6">
+        <div className="hidden items-center gap-8 text-sm font-medium text-white/90 md:flex">
           <button
-            onClick={() => setActiveTab('tx')}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'tx'
-                ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-slate-950 shadow-md shadow-cyan-500/30 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+            onClick={() => { setViewMode('transceiver'); scrollToDashboard(); }}
+            className={`transition-colors hover:text-white cursor-pointer font-medium ${viewMode === 'transceiver' ? 'text-white underline underline-offset-4' : 'text-white/70'}`}
           >
-            <Radio className="h-4 w-4" />
-            Transmitter Mode (Device A)
+            Split Transceiver
           </button>
           <button
-            onClick={() => setActiveTab('rx')}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'rx'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/30 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+            onClick={() => { setViewMode('tx'); scrollToDashboard(); }}
+            className={`transition-colors hover:text-white cursor-pointer font-medium ${viewMode === 'tx' ? 'text-white underline underline-offset-4' : 'text-white/70'}`}
           >
-            <ShieldCheck className="h-4 w-4" />
-            Receiver Mode (Device B)
+            Transmitter
+          </button>
+          <button
+            onClick={() => { setViewMode('rx'); scrollToDashboard(); }}
+            className={`transition-colors hover:text-white cursor-pointer font-medium ${viewMode === 'rx' ? 'text-white underline underline-offset-4' : 'text-white/70'}`}
+          >
+            Receiver
+          </button>
+          <button
+            onClick={() => { setViewMode('spectrogram'); scrollToDashboard(); }}
+            className={`transition-colors hover:text-white cursor-pointer font-medium ${viewMode === 'spectrogram' ? 'text-white underline underline-offset-4' : 'text-white/70'}`}
+          >
+            Spectrogram
+          </button>
+          <a
+            href="https://github.com/Krishnanand-10/SonicDrop.git"
+            target="_blank"
+            rel="noreferrer"
+            className="text-white/70 transition-colors hover:text-white font-medium"
+          >
+            Docs
+          </a>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Air-gap verification badge */}
+          <div className="whitespace-nowrap inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 backdrop-blur-md px-2.5 py-1 text-[11px] sm:text-xs text-white/90 shadow-sm font-sans">
+            <WifiOff className="h-3 w-3 text-emerald-400" />
+            <span className="whitespace-nowrap font-medium">Air-Gap (No Wi-Fi / BT)</span>
+          </div>
+
+          <a
+            href="https://github.com/Krishnanand-10/SonicDrop.git"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden text-sm font-medium text-white/90 transition-colors hover:text-white sm:flex items-center gap-1.5"
+          >
+            <GithubIcon className="h-4 w-4" />
+            <span>GitHub</span>
+          </a>
+
+          <button
+            onClick={scrollToDashboard}
+            className="rounded-full bg-white px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-semibold text-sky-700 shadow-md transition-colors hover:bg-white/90 cursor-pointer whitespace-nowrap"
+          >
+            Live Engine
+          </button>
+        </div>
+      </nav>
+
+      {/* ============================================================== */}
+      {/* HERO SECTION                                                   */}
+      {/* ============================================================== */}
+      <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-4 pt-10 text-center md:pt-16 select-none">
+        {/* Faint radial gradient scrim behind the text block */}
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(10,30,60,0.45)_0%,transparent_75%)] blur-2xl pointer-events-none" />
+
+        <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-md md:text-6xl lg:text-7xl font-sans">
+          Air-Gapped Data <br className="hidden md:block" /> Over Silent Sound
+        </h1>
+
+        {/* Subtitle with soft text-shadow */}
+        <p className="mt-5 max-w-2xl text-base text-white [text-shadow:0_1px_12px_rgba(10,30,60,0.35)] md:text-lg font-sans leading-relaxed">
+          Transfer cryptographic keys, files, and text between devices through physical sound waves.
+          No Wi-Fi. No Bluetooth. No Internet. No Cables.
+        </p>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <button
+            onClick={() => { setViewMode('tx'); scrollToDashboard(); }}
+            className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-sky-700 shadow-lg transition-colors hover:bg-white/90 cursor-pointer flex items-center gap-2 select-none border border-transparent"
+          >
+            <Radio className="h-4 w-4" />
+            <span>Transmit Over Air</span>
+          </button>
+
+          <button
+            onClick={() => { setViewMode('rx'); toggleListening(); scrollToDashboard(); }}
+            className="rounded-full bg-slate-900/30 text-white border border-white/30 px-6 py-2.5 text-sm font-semibold shadow-md backdrop-blur-sm transition-colors hover:bg-slate-900/50 hover:border-white/50 cursor-pointer flex items-center gap-2 select-none"
+          >
+            <ShieldCheck className="h-4 w-4 text-emerald-300" />
+            <span>Listen on Receiver</span>
           </button>
         </div>
 
-        {/* Transceiver Card Preview */}
-        <motion.div
-          layout
-          className="w-full max-w-2xl rounded-3xl border border-white/15 bg-slate-900/50 p-8 shadow-2xl backdrop-blur-2xl"
-        >
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
-              <span className="font-mono text-sm text-cyan-300 font-medium">
-                {activeTab === 'tx' ? 'TX CARRIER: 18,500 Hz – 20,000 Hz' : 'RX LISTENER: 48,000 Hz PCM'}
-              </span>
-            </div>
-            <span className="text-xs font-mono text-slate-400">16-FSK MODEM</span>
+        {/* Small feature line */}
+        <p className="mt-4 text-xs text-white [text-shadow:0_1px_12px_rgba(10,30,60,0.35)] flex items-center justify-center flex-wrap gap-2 font-sans">
+          <span>18.5 kHz – 20.0 kHz Ultrasonic Band</span>
+          <span className="opacity-60">&middot;</span>
+          <span>Reed-Solomon FEC + IEEE CRC-32</span>
+          <span className="opacity-60">&middot;</span>
+          <span className="font-mono">Zero Network Footprint</span>
+        </p>
+      </div>
+
+      {/* ============================================================== */}
+      {/* STAT STRIP (3 Glass Cards)                                     */}
+      {/* ============================================================== */}
+      <div className="relative z-10 mx-auto my-6 sm:my-8 w-full max-w-4xl px-3 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 select-none">
+          {/* Card 1: Carrier Band */}
+          <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-4 sm:p-5 backdrop-blur-xl shadow-lg text-center flex flex-col items-center justify-center">
+            <span className="font-mono text-2xl sm:text-3xl font-bold text-white tabular-nums tracking-tight">
+              18.5 – 20.0 kHz
+            </span>
+            <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium">
+              Ultrasonic carrier
+            </span>
           </div>
 
-          <div className="text-center py-8">
-            <p className="text-slate-300 text-sm">
-              Scaffolding complete. Ready to connect Web Audio DSP engine and Live Waterfall Spectrogram.
-            </p>
+          {/* Card 2: Network Isolation */}
+          <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-4 sm:p-5 backdrop-blur-xl shadow-lg text-center flex flex-col items-center justify-center">
+            <span className="font-mono text-2xl sm:text-3xl font-bold text-sky-300 tabular-nums tracking-tight">
+              100% Inaudible
+            </span>
+            <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium">
+              Presbycusis threshold
+            </span>
           </div>
-        </motion.div>
-      </main>
+
+          {/* Card 3: Error Correction */}
+          <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-4 sm:p-5 backdrop-blur-xl shadow-lg text-center flex flex-col items-center justify-center">
+            <span className="font-mono text-2xl sm:text-3xl font-bold text-emerald-300 tabular-nums tracking-tight">
+              RS(32, 24)
+            </span>
+            <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium">
+              Reed-Solomon parity
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* APP PANEL (Static Glass Card, Fixed In Place)                   */}
+      {/* ============================================================== */}
+      <div
+        id="dashboard-container"
+        className="relative z-10 mx-auto w-full max-w-6xl px-3 sm:px-6 md:px-8 pb-16"
+      >
+        <div className="rounded-3xl border border-white/15 bg-slate-900/50 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl min-h-[640px]">
+          {/* Top Frame Control Bar */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 font-sans text-xs sm:text-sm">
+              <button
+                onClick={() => setViewMode('transceiver')}
+                className={`rounded-lg px-3.5 py-1.5 font-medium transition-colors cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap border ${
+                  viewMode === 'transceiver'
+                    ? 'bg-sky-500/20 text-sky-200 border-sky-400/40 shadow-sm'
+                    : 'border-transparent text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Columns className="h-3.5 w-3.5" />
+                <span>Split Transceiver</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('tx')}
+                className={`rounded-lg px-3.5 py-1.5 font-medium transition-colors cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap border ${
+                  viewMode === 'tx'
+                    ? 'bg-purple-500/20 text-purple-200 border-purple-400/40 shadow-sm'
+                    : 'border-transparent text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Radio className="h-3.5 w-3.5" />
+                <span>Transmitter (Device A)</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('rx')}
+                className={`rounded-lg px-3.5 py-1.5 font-medium transition-colors cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap border ${
+                  viewMode === 'rx'
+                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40 shadow-sm'
+                    : 'border-transparent text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Receiver (Device B)</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('spectrogram')}
+                className={`rounded-lg px-3.5 py-1.5 font-medium transition-colors cursor-pointer select-none flex items-center gap-1.5 whitespace-nowrap border ${
+                  viewMode === 'spectrogram'
+                    ? 'bg-amber-500/20 text-amber-200 border-amber-400/40 shadow-sm'
+                    : 'border-transparent text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                <span>Waterfall Spectrogram</span>
+              </button>
+            </div>
+
+            {/* Profile indication pill */}
+            <div className="font-mono text-xs text-white/60">
+              CHANNEL: <span className="text-sky-300 font-semibold">{profile.name}</span>
+            </div>
+          </div>
+
+          {/* View Mode Contents */}
+          <div className="space-y-6">
+            {/* Live Waterfall Spectrogram Banner */}
+            <WaterfallSpectrogram
+              analyser={receiver.getAnalyserNode()}
+              profile={profile}
+              isListening={isListening}
+            />
+
+            {/* Split Transceiver Mode (Transmitter on Left, Receiver on Right) */}
+            {viewMode === 'transceiver' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-5 shadow-lg">
+                  <div className="flex items-center gap-2 mb-4 text-xs font-mono text-sky-300 uppercase tracking-wider font-semibold border-b border-white/10 pb-2">
+                    <Radio className="h-4 w-4" />
+                    <span>Transmitter (Device A)</span>
+                  </div>
+                  <TransmitterPanel
+                    profile={profile}
+                    onProfileChange={setProfile}
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-5 shadow-lg">
+                  <div className="flex items-center gap-2 mb-4 text-xs font-mono text-emerald-300 uppercase tracking-wider font-semibold border-b border-white/10 pb-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Receiver (Device B)</span>
+                  </div>
+                  <ReceiverPanel
+                    isListening={isListening}
+                    telemetry={telemetry}
+                    lastPayload={lastPayload}
+                    onToggleListening={toggleListening}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Dedicated Transmitter Mode */}
+            {viewMode === 'tx' && (
+              <div className="max-w-2xl mx-auto rounded-2xl border border-white/10 bg-slate-950/40 p-6 shadow-lg">
+                <TransmitterPanel
+                  profile={profile}
+                  onProfileChange={setProfile}
+                />
+              </div>
+            )}
+
+            {/* Dedicated Receiver Mode */}
+            {viewMode === 'rx' && (
+              <div className="max-w-2xl mx-auto rounded-2xl border border-white/10 bg-slate-950/40 p-6 shadow-lg">
+                <ReceiverPanel
+                  isListening={isListening}
+                  telemetry={telemetry}
+                  lastPayload={lastPayload}
+                  onToggleListening={toggleListening}
+                />
+              </div>
+            )}
+
+            {/* Dedicated Spectrogram Mode */}
+            {viewMode === 'spectrogram' && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-sm text-white/80 font-mono space-y-2">
+                  <p className="font-semibold text-white">How the Live Waterfall Spectrogram Works:</p>
+                  <p className="text-xs text-white/60">
+                    The canvas continuously renders a 60 FPS scrolling frequency heatmap of the raw 48 kHz PCM stream.
+                    When transmitting near-inaudible sound at 18.5 kHz – 20.0 kHz, distinct glowing lines cascade down the screen
+                    at the exact 16-FSK frequency bins, demonstrating acoustic transmission visually even in silent rooms.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
