@@ -94,9 +94,16 @@ export function ReceiverPanel({
                 {state.replace('_', ' ')}
               </span>
             </div>
-            <p className="text-xs text-white/60 font-mono">
-              {telemetry?.statusMessage || (isListening ? 'Awaiting 18.5 kHz ultrasonic chirp...' : 'Click Start to listen for audio packets')}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+              <p className="text-xs text-white/60 font-mono">
+                {telemetry?.statusMessage || (isListening ? 'Awaiting acoustic carrier...' : 'Click Start to listen for audio packets')}
+              </p>
+              {isListening && telemetry && telemetry.snrDb > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                  Mic Active: {telemetry.snrDb} dB
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

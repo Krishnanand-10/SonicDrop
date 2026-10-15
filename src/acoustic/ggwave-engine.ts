@@ -232,15 +232,23 @@ export class AcousticTransceiver {
     const audioCtx = await this.initAudio();
     const { ggwave, rxInstanceId } = await getGGWaveEngine(audioCtx.sampleRate);
 
-    // Request microphone without OS filters that would strip out ultrasound
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 1,
-      }
-    });
+    // Request microphone without OS filters that would strip out ultrasound, with fallback for mobile
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+        }
+      });
+    } catch {
+      // Fallback for mobile browsers (iOS / Android) that reject overconstrained audio parameters
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+    }
 
     this.micStream = stream;
 

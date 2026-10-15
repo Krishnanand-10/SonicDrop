@@ -116,6 +116,10 @@ export function App() {
           <span className="text-lg font-semibold tracking-tight text-white drop-shadow-sm font-mono">
             SonicDrop<span className="text-sky-200">.Air</span>
           </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 px-2.5 py-0.5 rounded-full shadow-sm ml-2 font-bold tracking-wide">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            v2.1 WASM
+          </span>
         </div>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-white/90 md:flex">
