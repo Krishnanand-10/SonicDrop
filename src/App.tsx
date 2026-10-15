@@ -37,6 +37,19 @@ export function App() {
   const [isListening, setIsListening] = useState(false);
   const [telemetry, setTelemetry] = useState<ReceiverTelemetry | null>(null);
   const [lastPayload, setLastPayload] = useState<DecodedPayload | null>(null);
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+
+  // Monitor network online/offline state for air-gap confirmation
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Hook receiver callbacks
   useEffect(() => {
@@ -145,9 +158,17 @@ export function App() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Air-gap verification badge */}
-          <div className="whitespace-nowrap inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 backdrop-blur-md px-2.5 py-1 text-[11px] sm:text-xs text-white/90 shadow-sm font-sans">
-            <WifiOff className="h-3 w-3 text-emerald-400" />
-            <span className="whitespace-nowrap font-medium">Air-Gap (No Wi-Fi / BT)</span>
+          <div
+            className={`whitespace-nowrap inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] sm:text-xs shadow-sm font-sans backdrop-blur-md transition-all ${
+              isOffline
+                ? 'border-emerald-400/50 bg-emerald-950/50 text-emerald-300 font-bold shadow-emerald-500/20'
+                : 'border-white/20 bg-black/30 text-white/90'
+            }`}
+          >
+            <WifiOff className={`h-3 w-3 ${isOffline ? 'text-emerald-400 animate-pulse' : 'text-sky-300'}`} />
+            <span className="whitespace-nowrap font-medium">
+              {isOffline ? 'Airplane Mode Locked (Air-Gap Active)' : 'Air-Gap Ready (PWA Offline)'}
+            </span>
           </div>
 
           <a
