@@ -242,28 +242,28 @@ export function App() {
           >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 select-none">
               <div className="group rounded-2xl border border-white/15 bg-slate-900/50 p-4 sm:p-5 backdrop-blur-xl shadow-lg transition-all duration-300 hover:border-cyan-400/50 hover:bg-slate-900/80 hover:shadow-2xl hover:-translate-y-0.5 text-center flex flex-col items-center justify-center cursor-pointer">
-                <span className="font-mono text-2xl sm:text-3xl font-bold text-white tabular-nums tracking-tight group-hover:text-cyan-200 transition-colors">
+                <span className="font-mono text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-white tabular-nums tracking-tight whitespace-nowrap group-hover:text-cyan-200 transition-colors">
                   18.5 – 20.0 kHz
                 </span>
-                <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium group-hover:text-white/95 transition-colors">
+                <span className="text-xs text-white/70 uppercase tracking-wider mt-1.5 font-sans font-medium whitespace-nowrap group-hover:text-white/95 transition-colors">
                   Ultrasonic carrier
                 </span>
               </div>
 
               <div className="group rounded-2xl border border-white/15 bg-slate-900/50 p-4 sm:p-5 backdrop-blur-xl shadow-lg transition-all duration-300 hover:border-sky-400/50 hover:bg-slate-900/80 hover:shadow-2xl hover:-translate-y-0.5 text-center flex flex-col items-center justify-center cursor-pointer">
-                <span className="font-mono text-2xl sm:text-3xl font-bold text-sky-300 tabular-nums tracking-tight group-hover:text-sky-200 transition-colors">
+                <span className="font-mono text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-sky-300 tabular-nums tracking-tight whitespace-nowrap group-hover:text-sky-200 transition-colors">
                   Near-Inaudible
                 </span>
-                <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium group-hover:text-white/95 transition-colors">
+                <span className="text-xs text-white/70 uppercase tracking-wider mt-1.5 font-sans font-medium whitespace-nowrap group-hover:text-white/95 transition-colors">
                   Presbycusis threshold
                 </span>
               </div>
 
               <div className="group rounded-2xl border border-white/15 bg-slate-900/50 p-4 sm:p-5 backdrop-blur-xl shadow-lg transition-all duration-300 hover:border-emerald-400/50 hover:bg-slate-900/80 hover:shadow-2xl hover:-translate-y-0.5 text-center flex flex-col items-center justify-center cursor-pointer">
-                <span className="font-mono text-2xl sm:text-3xl font-bold text-emerald-300 tabular-nums tracking-tight group-hover:text-emerald-200 transition-colors">
+                <span className="font-mono text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-emerald-300 tabular-nums tracking-tight whitespace-nowrap group-hover:text-emerald-200 transition-colors">
                   RS(32, 24)
                 </span>
-                <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium group-hover:text-white/95 transition-colors">
+                <span className="text-xs text-white/70 uppercase tracking-wider mt-1.5 font-sans font-medium whitespace-nowrap group-hover:text-white/95 transition-colors">
                   Reed-Solomon parity
                 </span>
               </div>
