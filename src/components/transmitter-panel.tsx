@@ -151,10 +151,10 @@ export function TransmitterPanel({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setKind('text')}
-            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer ${
               kind === 'text'
-                ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
-                : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
+                ? 'bg-sky-500/20 text-sky-200 border border-sky-400/50 shadow-md'
+                : 'text-white/70 hover:text-sky-200 hover:bg-slate-900/80 hover:border-sky-400/50 hover:shadow-lg border border-white/10'
             }`}
           >
             <span>Secret Message</span>
@@ -162,10 +162,10 @@ export function TransmitterPanel({
 
           <button
             onClick={() => setKind('crypto_key')}
-            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer ${
               kind === 'crypto_key'
-                ? 'bg-purple-500/20 text-purple-200 border border-purple-400/40 shadow-sm'
-                : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
+                ? 'bg-purple-500/20 text-purple-200 border border-purple-400/50 shadow-md'
+                : 'text-white/70 hover:text-purple-200 hover:bg-slate-900/80 hover:border-purple-400/50 hover:shadow-lg border border-white/10'
             }`}
           >
             <KeyRound className="h-3.5 w-3.5" />
@@ -174,10 +174,10 @@ export function TransmitterPanel({
 
           <button
             onClick={() => setKind('file')}
-            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 cursor-pointer ${
               kind === 'file'
-                ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 shadow-sm'
-                : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
+                ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/50 shadow-md'
+                : 'text-white/70 hover:text-emerald-200 hover:bg-slate-900/80 hover:border-emerald-400/50 hover:shadow-lg border border-white/10'
             }`}
           >
             <FileCode className="h-3.5 w-3.5" />

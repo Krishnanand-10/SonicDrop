@@ -13,19 +13,14 @@ if (typeof window !== 'undefined') {
   (window as any).getGGWaveEngine = getGGWaveEngine;
 }
 
-// In development mode, unregister old cached service workers so changes appear instantly without hard-refresh
+// In development mode, cleanly unregister service workers if an active controller exists to prevent stale cache interception
 if (import.meta.env.DEV) {
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       for (const registration of registrations) {
         registration.unregister();
       }
     });
-    if ('caches' in window) {
-      caches.keys().then((names) => {
-        for (const name of names) caches.delete(name);
-      });
-    }
   }
 } else {
   registerSW({ immediate: true });

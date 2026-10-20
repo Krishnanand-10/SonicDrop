@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export type CloudShaderProps = {
@@ -235,6 +235,8 @@ export const CloudShader = ({
   skyBottomColor = "#8cbfe8",
 }: CloudShaderProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const paramsRef = useRef({
     speed,
     count,
@@ -243,13 +245,15 @@ export const CloudShader = ({
     skyBottomColor,
   });
 
-  paramsRef.current = {
-    speed,
-    count,
-    cloudColor,
-    skyTopColor,
-    skyBottomColor,
-  };
+  useEffect(() => {
+    paramsRef.current = {
+      speed,
+      count,
+      cloudColor,
+      skyTopColor,
+      skyBottomColor,
+    };
+  }, [speed, count, cloudColor, skyTopColor, skyBottomColor]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -301,9 +305,10 @@ export const CloudShader = ({
     ).matches;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
+      // Cap DPR to 1.25 for procedural volumetric clouds: cuts pixel fill by ~60% with zero perceived loss in softness
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      const width = canvas.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1920);
+      const height = canvas.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 1080);
       const w = Math.max(1, Math.floor(width * dpr));
       const h = Math.max(1, Math.floor(height * dpr));
       if (canvas.width !== w || canvas.height !== h) {
@@ -336,7 +341,13 @@ export const CloudShader = ({
       frame = requestAnimationFrame(draw);
     };
 
-    frame = requestAnimationFrame(draw);
+    // Immediate first paint
+    draw(start);
+
+    // Smooth cinematic dissolve transition once WebGL is ready
+    requestAnimationFrame(() => {
+      setIsLoaded(true);
+    });
 
     return () => {
       running = false;
@@ -352,13 +363,16 @@ export const CloudShader = ({
   return (
     <div
       className={cn(
-        "relative h-full min-h-80 w-full overflow-hidden",
+        "relative h-full min-h-80 w-full overflow-hidden bg-slate-950",
         className,
       )}
     >
       <canvas
         ref={canvasRef}
-        className="pointer-events-none absolute inset-0 h-full w-full"
+        className={cn(
+          "pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-700 ease-out",
+          isLoaded ? "opacity-100" : "opacity-0"
+        )}
       />
       {children ? (
         <div className={cn("relative z-10 flex h-full w-full", contentClassName || "items-center justify-center")}>

@@ -239,7 +239,7 @@ export function ReceiverPanel({
             <p>No packet received yet.</p>
             <p className="text-[11px] text-white/40 mt-1">
               {isListening
-                ? 'Keep microphone active. Transmit on Device A to see data appear automatically.'
+                ? 'Keep microphone active. Transmit on Transmitter to see data appear automatically.'
                 : 'Turn ON the receiver above to start listening for ultrasonic pulses.'}
             </p>
           </div>
