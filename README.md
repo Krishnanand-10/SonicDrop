@@ -26,6 +26,49 @@ Within seconds, the **Receiver** device's microphone captures the ultrasonic sou
 
 ---
 
+## ✨ Key Features
+
+* **🔊 Near-Inaudible 18.5 – 20.0 kHz Carrier Band**: Operates beyond the upper range of adult human speech and music, enabling covert, silent data exchange in shared or public spaces.
+* **⚡ C++ WebAssembly Acoustic DSP**: Powered by Georgi Gerganov's high-performance `ggwave` engine compiled to WebAssembly for sample-accurate tone synthesis, Goertzel filtering, and clock recovery.
+* **🛡️ Reed-Solomon RS(32, 24) Forward Error Correction**: Injects 8 Galois Field $GF(256)$ parity symbols per block, dynamically reconstructing damaged bytes caused by room reflections, Doppler shift, and acoustic echo.
+* **🔒 Hardware-Grade IEEE 802.3 CRC-32 Verification**: Cryptographic checksum calculation across raw payloads guarantees that encryption keys and seed phrases arrive bit-for-bit identical with zero corruption.
+* **🛑 Intelligent Receiver Auto-Stop**: The microphone hardware stream immediately disengages (`MediaStreamTrack.stop()`) upon packet verification, clearing the OS recording indicator, saving battery, and eliminating background surveillance risks.
+* **🌊 60 FPS HTML5 Canvas Waterfall Spectrogram**: Real-time spectral density analyzer visualizing ultrasonic audio bins, signal-to-noise ratio (SNR in dB), and incoming symbol transitions.
+* **📲 100% Offline Progressive Web App (PWA)**: Cached via Service Workers for standalone desktop and mobile home screen installation, functioning seamlessly with Airplane Mode locked.
+* **🎵 Dual Transmission Profiles**: Toggle between **Ultrasonic Stealth** (18.5 – 20.0 kHz, near-inaudible) and **Audible Acoustic Modem** (1.6 – 3.1 kHz, retro sci-fi modem chirps for debugging and audio verification).
+* **🎮 Interactive 2-Device Simulation**: Built-in visual simulation directly on the landing page demonstrating packet traversal across a 1.5m air-gap with live CRC and latency telemetry.
+
+---
+
+## 🏆 Key Benefits & Architectural Advantages
+
+| Benefit | Traditional Transport (Wi-Fi / BT / Cloud) | SonicDrop (Ultrasonic Air-Gap) |
+| :--- | :--- | :--- |
+| **Air-Gap Compliance** | ❌ Violates air-gap (requires RF transceiver or physical cable) | ✅ **100% Air-Gapped compliant (physical room sound waves only)** |
+| **RF Sniffing Immunity** | ❌ Vulnerable to directional antennas, Wi-Fi deauth, and SDR packet capture | ✅ **0 dBm RF radiation; sound waves cannot penetrate solid room walls** |
+| **Zero Infrastructure** | ❌ Requires routers, cellular base stations, or remote relay servers | ✅ **Direct P2P acoustic link; operates off-grid in remote or SCIF enclaves** |
+| **Pairing & Credentials** | ❌ Requires PINs, passkeys, SSID passwords, or contact sharing | ✅ **Zero handshake; instant acoustic drop with zero setup friction** |
+| **Cross-Platform Compatibility** | ❌ Fragmented drivers, proprietary protocols (e.g. AirDrop requires Apple hardware) | ✅ **Universal Web Audio API; runs in any browser on iOS, Android, Mac, Linux, Windows** |
+| **Privacy & Sovereignty** | ❌ Metadata logged by ISPs, cloud providers, and network switches | ✅ **Zero network footprint; zero cloud tracking; data exists only in ambient air** |
+
+---
+
+## 🎯 Mission-Critical Use Cases
+
+1. **🔐 Cold Storage & Cryptocurrency Seed Phrases**  
+   Safely transfer BIP-39 mnemonic recovery phrases, private keys, and offline-signed transaction hexes between air-gapped cold storage laptops and connected internet devices without ever plugging in a USB drive.
+
+2. **🏢 SCIF & Classified Defense Enclaves**  
+   Move text files, cryptographic hashes, and configuration dumps across devices in Sensitive Compartmented Information Facilities (SCIFs) and TEMPEST-rated rooms where Wi-Fi, Bluetooth, cellular, and USB drives are strictly forbidden.
+
+3. **🔑 Ephemeral Credentials & TOTP Secrets**  
+   Drop sensitive one-time passwords, temporary SSH access keys, and confidential environment variables between workstations without leaving audit logs on corporate chat servers or local network proxies.
+
+4. **⚡ Disaster Recovery & Off-Grid Mesh Drop**  
+   Exchange emergency communications, contact cards, and critical coordinates when telecommunications grids, cellular towers, and local area networks are down.
+
+---
+
 ## 🛰️ Architecture & Engineering Pipeline
 
 ```
