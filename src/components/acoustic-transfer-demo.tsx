@@ -522,7 +522,7 @@ export function AcousticTransferDemo() {
             <span className="text-white/40">&bull;</span>
             <span>Speed: 343 m/s</span>
             <span className="text-white/40">&bull;</span>
-            <span className="text-emerald-300 font-medium">100% Inaudible</span>
+            <span className="text-emerald-300 font-medium">Near-Inaudible Carrier</span>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">

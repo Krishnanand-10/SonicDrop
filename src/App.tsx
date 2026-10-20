@@ -252,7 +252,7 @@ export function App() {
 
               <div className="group rounded-2xl border border-white/15 bg-slate-900/50 p-4 sm:p-5 backdrop-blur-xl shadow-lg transition-all duration-300 hover:border-sky-400/50 hover:bg-slate-900/80 hover:shadow-2xl hover:-translate-y-0.5 text-center flex flex-col items-center justify-center cursor-pointer">
                 <span className="font-mono text-2xl sm:text-3xl font-bold text-sky-300 tabular-nums tracking-tight group-hover:text-sky-200 transition-colors">
-                  100% Inaudible
+                  Near-Inaudible
                 </span>
                 <span className="text-xs text-white/70 uppercase tracking-wider mt-1 font-sans font-medium group-hover:text-white/95 transition-colors">
                   Presbycusis threshold

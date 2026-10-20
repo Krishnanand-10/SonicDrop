@@ -185,7 +185,13 @@ export class AcousticTransceiver {
     source.buffer = audioBuffer;
 
     const gainNode = audioCtx.createGain();
-    gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+    const now = audioCtx.currentTime;
+    // Apply 15ms soft taper envelope to prevent abrupt speaker diaphragm pop/click
+    const rampTime = Math.min(0.015, durationSeconds / 6);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(1.0, now + rampTime);
+    gainNode.gain.setValueAtTime(1.0, Math.max(now + rampTime, now + durationSeconds - rampTime));
+    gainNode.gain.linearRampToValueAtTime(0, now + durationSeconds);
 
     source.connect(gainNode);
     gainNode.connect(audioCtx.destination);
