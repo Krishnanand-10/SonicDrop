@@ -124,7 +124,7 @@ export function ReceiverPanel({
           ) : (
             <>
               <Mic className="h-4 w-4 text-sky-600" />
-              <span>Listen on Mic</span>
+              <span>{lastPayload ? 'Listen for Next Message' : 'Listen on Mic'}</span>
             </>
           )}
         </button>

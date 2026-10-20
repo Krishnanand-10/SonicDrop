@@ -81,6 +81,19 @@ export function LiveEnginePage({ onNavigateHome }: LiveEnginePageProps = {}) {
 
     transceiver.onPacketReceived = (p) => {
       setLastPayload(p);
+      // Automatically stop microphone listening upon successful message reception
+      transceiver.stopListening();
+      setIsListening(false);
+      setTelemetry({
+        state: 'success',
+        snrDb: 0,
+        dominantFreqHz: 0,
+        detectedSymbol: null,
+        symbolsReceived: 0,
+        totalExpectedSymbols: 0,
+        progressPercent: 100,
+        statusMessage: 'Packet received! Microphone stopped automatically.',
+      });
     };
 
     transceiver.onError = (msg) => {
