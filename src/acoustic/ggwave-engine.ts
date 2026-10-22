@@ -74,6 +74,8 @@ export class AcousticTransceiver {
   private processor: ScriptProcessorNode | null = null;
   private isListening = false;
   private currentSource: AudioBufferSourceNode | null = null;
+  private currentGain: GainNode | null = null;
+  private isTransmitting = false;
 
   public onPacketReceived?: (payload: DecodedPayload) => void;
   public onTelemetry?: (telemetry: ReceiverTelemetry) => void;
@@ -167,20 +169,22 @@ export class AcousticTransceiver {
     return { audioBuffer, durationSeconds };
   }
 
+  public getIsTransmitting(): boolean {
+    return this.isTransmitting;
+  }
+
   /**
-   * Transmits the payload over the physical speaker.
+   * Plays a pre-encoded audio buffer with soft taper envelopes.
    */
-  public async transmit(
-    payload: string,
-    protocol: AcousticProtocol = 'ultrasound_normal',
-    volume = 75,
+  public async playBuffer(
+    audioBuffer: AudioBuffer,
+    durationSeconds: number,
     onProgress?: (progress: number) => void
   ): Promise<void> {
     const audioCtx = await this.initAudio();
-    const { audioBuffer, durationSeconds } = await this.encode(payload, protocol, volume);
-
     this.stopTransmit();
 
+    this.isTransmitting = true;
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
 
@@ -197,6 +201,7 @@ export class AcousticTransceiver {
     gainNode.connect(audioCtx.destination);
 
     this.currentSource = source;
+    this.currentGain = gainNode;
 
     const startTime = performance.now();
     const durationMs = durationSeconds * 1000;
@@ -211,6 +216,8 @@ export class AcousticTransceiver {
       source.onended = () => {
         clearInterval(progressTimer);
         this.currentSource = null;
+        this.currentGain = null;
+        this.isTransmitting = false;
         onProgress?.(100);
         resolve();
       };
@@ -218,15 +225,40 @@ export class AcousticTransceiver {
     });
   }
 
+  /**
+   * Transmits the payload over the physical speaker once.
+   */
+  public async transmit(
+    payload: string,
+    protocol: AcousticProtocol = 'ultrasound_normal',
+    volume = 75,
+    onProgress?: (progress: number) => void
+  ): Promise<void> {
+    const { audioBuffer, durationSeconds } = await this.encode(payload, protocol, volume);
+    return this.playBuffer(audioBuffer, durationSeconds, onProgress);
+  }
+
   public stopTransmit(): void {
+    if (this.currentGain && this.audioCtx && this.audioCtx.state === 'running') {
+      try {
+        const now = this.audioCtx.currentTime;
+        this.currentGain.gain.cancelScheduledValues(now);
+        this.currentGain.gain.setValueAtTime(this.currentGain.gain.value, now);
+        this.currentGain.gain.linearRampToValueAtTime(0, now + 0.01);
+      } catch {
+        // ignore
+      }
+    }
     if (this.currentSource) {
       try {
-        this.currentSource.stop();
+        this.currentSource.stop(this.audioCtx ? this.audioCtx.currentTime + 0.012 : 0);
       } catch {
         // already stopped
       }
       this.currentSource = null;
+      this.currentGain = null;
     }
+    this.isTransmitting = false;
   }
 
   /**

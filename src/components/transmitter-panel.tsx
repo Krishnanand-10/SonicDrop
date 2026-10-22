@@ -3,8 +3,8 @@
  * Air-gapped payload input (text, crypto keys, files) and ultrasonic audio synthesis controls.
  */
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Radio,
   KeyRound,
@@ -13,6 +13,8 @@ import {
   Square,
   ShieldCheck,
   Upload,
+  Repeat,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   PROFILES,
@@ -39,6 +41,21 @@ export function TransmitterPanel({
 
   const [telemetry, setTelemetry] = useState<TransmitterTelemetry | null>(null);
   const [isTransmitting, setIsTransmitting] = useState(false);
+  const [continuousLoop, setContinuousLoop] = useState(true);
+  const [currentPass, setCurrentPass] = useState(1);
+  const [transmissionNotice, setTransmissionNotice] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+
+  const isTransmittingRef = useRef(false);
+  const abortSleepRef = useRef<(() => void) | null>(null);
+
+  // Clean up any running transmission on unmount
+  useEffect(() => {
+    return () => {
+      isTransmittingRef.current = false;
+      abortSleepRef.current?.();
+      transceiver.stopTransmit();
+    };
+  }, []);
 
   // Preset generators for quick viva / demo
   const handleSetPreset = (preset: 'aes' | 'seed' | 'totp' | 'text') => {
@@ -117,31 +134,102 @@ export function TransmitterPanel({
 
     try {
       setIsTransmitting(true);
+      isTransmittingRef.current = true;
+      setTransmissionNotice(null);
       const proto = profile.type === 'ultrasonic' ? 'ultrasound_normal' : 'audible_normal';
 
-      await transceiver.transmit(textToSend, proto, 75, (p) => {
+      // Pre-encode buffer once so loop passes have zero WebAssembly re-encoding latency
+      const { audioBuffer, durationSeconds } = await transceiver.encode(textToSend, proto, 75);
+
+      let pass = 1;
+      const startTimestamp = performance.now();
+
+      while (isTransmittingRef.current) {
+        setCurrentPass(pass);
         setTelemetry({
-          isTransmitting: p < 100,
-          currentSymbol: Math.round((p / 100) * 40),
+          isTransmitting: true,
+          currentSymbol: 0,
           totalSymbols: 40,
           currentFreqHz: profile.baseFrequency,
-          progressPercent: p,
+          progressPercent: 0,
+          currentPass: pass,
         });
-      });
 
-      onTransmissionComplete?.(1, 1500);
+        await transceiver.playBuffer(audioBuffer, durationSeconds, (p) => {
+          if (!isTransmittingRef.current) return;
+          setTelemetry({
+            isTransmitting: true,
+            currentSymbol: Math.round((p / 100) * 40),
+            totalSymbols: 40,
+            currentFreqHz: profile.baseFrequency,
+            progressPercent: p,
+            currentPass: pass,
+          });
+        });
+
+        // Single-shot mode or user aborted
+        if (!continuousLoop || !isTransmittingRef.current) {
+          break;
+        }
+
+        // 400ms inter-packet guard pause allowing receiver buffer synchronization
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 400);
+          abortSleepRef.current = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+        });
+
+        if (!isTransmittingRef.current) {
+          break;
+        }
+
+        pass++;
+      }
+
+      const totalDuration = Math.round(performance.now() - startTimestamp);
+      onTransmissionComplete?.(1, totalDuration);
+
+      if (isTransmittingRef.current) {
+        setTransmissionNotice({
+          text: `Transmission complete (${pass} ${pass === 1 ? 'pass' : 'passes'} broadcasted).`,
+          type: 'success',
+        });
+      }
     } catch (err) {
       console.error('Transmit error:', err);
+      setTransmissionNotice({
+        text: 'Transmission interrupted or audio failed.',
+        type: 'info',
+      });
     } finally {
+      isTransmittingRef.current = false;
       setIsTransmitting(false);
       setTelemetry(null);
+      abortSleepRef.current = null;
     }
   };
 
-  const handleStop = () => {
+  const handleStop = (reached = false) => {
+    const passes = currentPass;
+    isTransmittingRef.current = false;
+    abortSleepRef.current?.();
     transceiver.stopTransmit();
     setIsTransmitting(false);
     setTelemetry(null);
+
+    if (reached) {
+      setTransmissionNotice({
+        text: `Message reached receiver! Successfully delivered across ${passes} ${passes === 1 ? 'pass' : 'passes'}.`,
+        type: 'success',
+      });
+    } else {
+      setTransmissionNotice({
+        text: `Transmission stopped after ${passes} ${passes === 1 ? 'pass' : 'passes'}.`,
+        type: 'info',
+      });
+    }
   };
 
   return (
@@ -276,6 +364,70 @@ export function TransmitterPanel({
         </div>
       )}
 
+      {/* Continuous Loop Mode Setting */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-white/10 bg-slate-950/60 backdrop-blur-sm">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-400/20 shrink-0">
+            <Repeat className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-white">Repeat until Reached</span>
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                Fix for missed packets
+              </span>
+            </div>
+            <p className="text-[11px] text-white/60 mt-0.5">
+              Continuously loops the acoustic pulses until your receiving device captures the message.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={continuousLoop}
+          onClick={() => setContinuousLoop(!continuousLoop)}
+          disabled={isTransmitting}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer self-end sm:self-center ${
+            continuousLoop ? 'bg-sky-500' : 'bg-slate-700'
+          } ${isTransmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              continuousLoop ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Notice Banner when transmission completes or stops */}
+      <AnimatePresence>
+        {transmissionNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className={`rounded-xl p-3 text-xs font-mono flex items-center justify-between border ${
+              transmissionNotice.type === 'success'
+                ? 'border-emerald-400/30 bg-emerald-950/40 text-emerald-300'
+                : 'border-white/10 bg-slate-900/60 text-white/80'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{transmissionNotice.text}</span>
+            </div>
+            <button
+              onClick={() => setTransmissionNotice(null)}
+              className="text-white/40 hover:text-white text-xs px-2 py-0.5 rounded cursor-pointer"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Expanding Ripple Rings & Telemetry Display */}
       {isTransmitting && telemetry && (
         <div className="relative overflow-hidden rounded-2xl border border-sky-400/30 bg-sky-950/30 p-6 backdrop-blur-xl shadow-lg">
@@ -300,7 +452,17 @@ export function TransmitterPanel({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-white/80">
-              <span>TRANSMITTING CARRIER PULSES...</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sky-200">
+                  {continuousLoop ? `PASS #${telemetry.currentPass || 1} • TRANSMITTING...` : 'TRANSMITTING CARRIER PULSES...'}
+                </span>
+                {continuousLoop && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] text-sky-300 font-semibold border border-sky-400/30 animate-pulse">
+                    <Repeat className="h-2.5 w-2.5" />
+                    Repeating until stopped
+                  </span>
+                )}
+              </div>
               <span className="text-sky-300 font-bold">{telemetry.progressPercent}%</span>
             </div>
 
@@ -313,9 +475,14 @@ export function TransmitterPanel({
               />
             </div>
 
-            <div className="flex items-center justify-between text-[11px] font-mono text-white/60 pt-1">
+            <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-white/60 pt-1 gap-2">
               <span>Symbol: {telemetry.currentSymbol} / {telemetry.totalSymbols}</span>
               <span>Band: {profile.baseFrequency} Hz – {profile.baseFrequency + 15 * profile.stepFrequency} Hz</span>
+              {continuousLoop && (
+                <span className="text-emerald-400 font-semibold">
+                  Tap &ldquo;Message Reached!&rdquo; below once received
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -324,19 +491,30 @@ export function TransmitterPanel({
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2 text-xs font-mono text-white/60">
-          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>Volume: set speaker to ~70-80% for air-gap transfer</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {isTransmitting ? (
-            <button
-              onClick={handleStop}
-              className="rounded-full bg-rose-600/80 hover:bg-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors cursor-pointer flex items-center gap-2"
-            >
-              <Square className="h-4 w-4 fill-current" />
-              <span>Abort</span>
-            </button>
+            <>
+              {continuousLoop && (
+                <button
+                  onClick={() => handleStop(true)}
+                  className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2 border border-emerald-300"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Message Reached! Stop</span>
+                </button>
+              )}
+              <button
+                onClick={() => handleStop(false)}
+                className="rounded-full bg-rose-600/80 hover:bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+                <span>{continuousLoop ? 'Stop' : 'Abort'}</span>
+              </button>
+            </>
           ) : (
             <button
               onClick={handleTransmit}
@@ -344,7 +522,13 @@ export function TransmitterPanel({
             >
               <Send className="h-4 w-4 text-sky-600" />
               <span>
-                {profile.type === 'ultrasonic' ? 'Transmit Ultrasonic (Silent)' : 'Transmit Acoustic (Modem Chirp)'}
+                {profile.type === 'ultrasonic'
+                  ? continuousLoop
+                    ? 'Start Ultrasonic Broadcast (Continuous)'
+                    : 'Transmit Ultrasonic (1x Burst)'
+                  : continuousLoop
+                    ? 'Start Acoustic Modem (Continuous)'
+                    : 'Transmit Acoustic (1x Burst)'}
               </span>
             </button>
           )}

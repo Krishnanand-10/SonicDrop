@@ -111,4 +111,5 @@ export interface TransmitterTelemetry {
   totalSymbols: number;
   currentFreqHz: number;
   progressPercent: number;
+  currentPass?: number;
 }
