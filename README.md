@@ -12,8 +12,7 @@
 
 ## 🌐 Live Application
 
-* **Main Landing Page & Simulation:** [https://sonic-drop.vercel.app](https://sonic-drop.vercel.app)
-* **Live Engine Workstation:** [https://sonic-drop.vercel.app/app](https://sonic-drop.vercel.app/app)
+👉 **[https://sonic-drop.vercel.app](https://sonic-drop.vercel.app)**
 
 ---
 
@@ -155,7 +154,7 @@ npm run build
 
 ## 📱 Mobile Device Testing
 
-1. Open **[https://sonic-drop.vercel.app/app](https://sonic-drop.vercel.app/app)** on two devices (e.g. laptop & smartphone).
+1. Open **[https://sonic-drop.vercel.app](https://sonic-drop.vercel.app)** on two devices (e.g. laptop & smartphone) and tap **"Try SonicDrop"**.
 2. Set **Device 1** to **Receiver** and tap **"Listen on Mic"** (allow microphone permissions).
 3. Set **Device 2** to **Transmitter**, choose a sample payload or type text, set media volume to ~70%, and click **"Emit Ultrasonic Payload"**.
 4. The data travels through the air via ultrasonic sound waves and decodes automatically on Device 1.
