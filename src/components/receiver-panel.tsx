@@ -203,7 +203,7 @@ export function ReceiverPanel({
               <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-xs text-white/80">
                 <div>
                   <p className="font-semibold text-white">{lastPayload.filename || 'received_file.bin'}</p>
-                  <p className="text-white/60">{(lastPayload.data.length / 1024).toFixed(2)} KB &bull; Type: {lastPayload.mimeType || 'binary'}</p>
+                  <p className="text-white/60">{lastPayload.data.length < 1024 ? `${lastPayload.data.length} bytes` : `${(lastPayload.data.length / 1024).toFixed(2)} KB`} &bull; Type: {lastPayload.mimeType || 'binary'}</p>
                 </div>
                 <button
                   onClick={handleDownloadFile}

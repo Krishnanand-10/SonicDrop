@@ -91,28 +91,45 @@ export function TransmitterPanel({
     reader.readAsArrayBuffer(file);
   };
 
+  const handleLoadSampleFile = (type: 'key' | 'txt' | 'seed') => {
+    let name = 'secret.txt';
+    let mime = 'text/plain';
+    let content = 'CONFIDENTIAL_PAYLOAD_2026: 0x9F4AE12D verified.';
+    if (type === 'key') {
+      name = 'aes256.key';
+      mime = 'application/octet-stream';
+      content = '9f4ae12db8c049e21789c6295ef104928192a6c3f1b40293e871b694a0283f61';
+    } else if (type === 'seed') {
+      name = 'vault.seed';
+      mime = 'text/plain';
+      content = 'orbit acoustic signal cipher ultrasonic quantum airgap vault matrix echo';
+    }
+    const encoder = new TextEncoder();
+    setSelectedFile({
+      name,
+      type: mime,
+      bytes: encoder.encode(content),
+    });
+    setKind('file');
+  };
+
   const handleTransmit = async () => {
     let textToSend = '';
     if (kind === 'file' && selectedFile) {
-      if (selectedFile.bytes.length <= 384) {
-        let binaryStr = '';
-        for (let i = 0; i < selectedFile.bytes.length; i++) {
-          binaryStr += String.fromCharCode(selectedFile.bytes[i]);
-        }
-        textToSend = JSON.stringify({
-          k: 'file',
-          name: selectedFile.name,
-          mime: selectedFile.type,
-          b64: btoa(binaryStr),
-        });
-      } else {
-        textToSend = JSON.stringify({
-          k: 'file',
-          name: selectedFile.name,
-          mime: selectedFile.type,
-          d: `FILE: ${selectedFile.name} (${selectedFile.bytes.length} bytes)`,
-        });
+      if (selectedFile.bytes.length > 100) {
+        alert('File size exceeds 100 bytes limit for acoustic transmission. Please select a small key, seed, or text file.');
+        return;
       }
+      let binaryStr = '';
+      for (let i = 0; i < selectedFile.bytes.length; i++) {
+        binaryStr += String.fromCharCode(selectedFile.bytes[i]);
+      }
+      textToSend = JSON.stringify({
+        k: 'file',
+        name: selectedFile.name,
+        mime: selectedFile.type,
+        b64: btoa(binaryStr),
+      });
     } else if (kind === 'crypto_key') {
       textToSend = JSON.stringify({
         k: 'crypto_key',
@@ -299,24 +316,66 @@ export function TransmitterPanel({
         </div>
       ) : (
         /* File Upload Drop Zone */
-        <div className="rounded-2xl border border-dashed border-white/25 bg-slate-950/40 p-8 text-center transition-colors hover:border-sky-400/60">
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center justify-center">
-            <Upload className="h-10 w-10 text-sky-400 mb-3" />
-            <span className="text-sm font-semibold text-white">
-              {selectedFile ? selectedFile.name : 'Choose a file to drop over audio'}
-            </span>
-            <span className="text-xs text-white/60 mt-1 font-mono">
-              {selectedFile
-                ? `${(selectedFile.bytes.length / 1024).toFixed(2)} KB • Ready for transmission`
-                : 'Max recommended size: 4 KB (text, mini QR, keys, certificates)'}
-            </span>
-          </label>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-dashed border-white/25 bg-slate-950/40 p-8 text-center transition-colors hover:border-sky-400/60">
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center justify-center">
+              <Upload className="h-10 w-10 text-sky-400 mb-3" />
+              <span className="text-sm font-semibold text-white">
+                {selectedFile ? selectedFile.name : 'Choose a micro-file to drop over audio'}
+              </span>
+              <span className="text-xs mt-1 font-mono">
+                {selectedFile ? (
+                  selectedFile.bytes.length <= 100 ? (
+                    <span className="text-emerald-400 font-semibold">
+                      {selectedFile.bytes.length} bytes &bull; Ready for ultrasonic transfer
+                    </span>
+                  ) : (
+                    <span className="text-rose-400 font-semibold">
+                      {(selectedFile.bytes.length / 1024).toFixed(2)} KB &bull; Exceeds 100-byte limit (Acoustic audio is for keys &amp; text files)
+                    </span>
+                  )
+                ) : (
+                  <span className="text-white/60">
+                    Max acoustic limit: ~100 bytes (e.g. .key, .seed, .pem, .txt, .json)
+                  </span>
+                )}
+              </span>
+            </label>
+          </div>
+
+          {/* Quick Demo File Presets */}
+          <div className="flex flex-wrap items-center justify-between text-xs font-mono text-white/60 px-1 gap-2">
+            <span>Quick Demo Presets:</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleLoadSampleFile('key')}
+                className="px-2 py-1 rounded text-[11px] font-mono bg-white/10 hover:bg-white/20 text-sky-200 transition-colors cursor-pointer"
+              >
+                + aes256.key (32B)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadSampleFile('seed')}
+                className="px-2 py-1 rounded text-[11px] font-mono bg-white/10 hover:bg-white/20 text-purple-200 transition-colors cursor-pointer"
+              >
+                + vault.seed (68B)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadSampleFile('txt')}
+                className="px-2 py-1 rounded text-[11px] font-mono bg-white/10 hover:bg-white/20 text-emerald-200 transition-colors cursor-pointer"
+              >
+                + secret.txt (48B)
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -384,11 +443,20 @@ export function TransmitterPanel({
           ) : (
             <button
               onClick={handleTransmit}
-              className="rounded-full bg-white hover:bg-white/90 text-sky-700 px-7 py-2.5 text-sm font-bold shadow-lg transition-all cursor-pointer flex items-center gap-2 border border-transparent shadow-sky-400/20"
+              disabled={kind === 'file' && !!selectedFile && selectedFile.bytes.length > 100}
+              className={`rounded-full px-7 py-2.5 text-sm font-bold shadow-lg transition-all flex items-center gap-2 border border-transparent shadow-sky-400/20 ${
+                kind === 'file' && selectedFile && selectedFile.bytes.length > 100
+                  ? 'bg-slate-800 text-white/40 cursor-not-allowed border-white/10'
+                  : 'bg-white hover:bg-white/90 text-sky-700 cursor-pointer'
+              }`}
             >
               <Send className="h-4 w-4 text-sky-600" />
               <span>
-                {profile.type === 'ultrasonic' ? 'Transmit Ultrasonic (Silent)' : 'Transmit Acoustic (Modem Chirp)'}
+                {kind === 'file' && selectedFile && selectedFile.bytes.length > 100
+                  ? 'File Exceeds 100-Byte Limit'
+                  : profile.type === 'ultrasonic'
+                  ? 'Transmit Ultrasonic (Silent)'
+                  : 'Transmit Acoustic (Modem Chirp)'}
               </span>
             </button>
           )}
