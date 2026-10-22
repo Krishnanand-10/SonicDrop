@@ -41,7 +41,7 @@ export function TransmitterPanel({
 
   const [telemetry, setTelemetry] = useState<TransmitterTelemetry | null>(null);
   const [isTransmitting, setIsTransmitting] = useState(false);
-  const [continuousLoop, setContinuousLoop] = useState(true);
+  const continuousLoop = true;
   const [currentPass, setCurrentPass] = useState(1);
   const [transmissionNotice, setTransmissionNotice] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
 
@@ -364,43 +364,6 @@ export function TransmitterPanel({
         </div>
       )}
 
-      {/* Continuous Loop Mode Setting */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-white/10 bg-slate-950/60 backdrop-blur-sm">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-400/20 shrink-0">
-            <Repeat className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-semibold text-white">Repeat until Reached</span>
-              <span className="rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Fix for missed packets
-              </span>
-            </div>
-            <p className="text-[11px] text-white/60 mt-0.5">
-              Continuously loops the acoustic pulses until your receiving device captures the message.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          role="switch"
-          aria-checked={continuousLoop}
-          onClick={() => setContinuousLoop(!continuousLoop)}
-          disabled={isTransmitting}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer self-end sm:self-center ${
-            continuousLoop ? 'bg-sky-500' : 'bg-slate-700'
-          } ${isTransmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              continuousLoop ? 'translate-x-6' : 'translate-x-1'
-            }`}
-          />
-        </button>
-      </div>
-
       {/* Notice Banner when transmission completes or stops */}
       <AnimatePresence>
         {transmissionNotice && (
@@ -498,21 +461,19 @@ export function TransmitterPanel({
         <div className="flex flex-wrap items-center gap-2.5">
           {isTransmitting ? (
             <>
-              {continuousLoop && (
-                <button
-                  onClick={() => handleStop(true)}
-                  className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2 border border-emerald-300"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Message Reached! Stop</span>
-                </button>
-              )}
+              <button
+                onClick={() => handleStop(true)}
+                className="rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2 border border-emerald-300"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Message Reached! Stop</span>
+              </button>
               <button
                 onClick={() => handleStop(false)}
                 className="rounded-full bg-rose-600/80 hover:bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors cursor-pointer flex items-center gap-2"
               >
                 <Square className="h-3.5 w-3.5 fill-current" />
-                <span>{continuousLoop ? 'Stop' : 'Abort'}</span>
+                <span>Stop</span>
               </button>
             </>
           ) : (
@@ -522,13 +483,7 @@ export function TransmitterPanel({
             >
               <Send className="h-4 w-4 text-sky-600" />
               <span>
-                {profile.type === 'ultrasonic'
-                  ? continuousLoop
-                    ? 'Start Ultrasonic Broadcast (Continuous)'
-                    : 'Transmit Ultrasonic (1x Burst)'
-                  : continuousLoop
-                    ? 'Start Acoustic Modem (Continuous)'
-                    : 'Transmit Acoustic (1x Burst)'}
+                {profile.type === 'ultrasonic' ? 'Transmit Ultrasonic (Silent)' : 'Transmit Acoustic (Modem Chirp)'}
               </span>
             </button>
           )}
